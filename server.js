@@ -13,7 +13,7 @@ server.use(jsonServer.defaults());
 
 const SECRET_KEY = '123456789'
 
-const expiresIn = '1h'
+const expiresIn = '12h'
 
 // Create a token from a payload 
 function createToken(payload){
@@ -34,7 +34,7 @@ function isAuthenticated({email, password}){
 server.post('/auth/register', (req, res) => {
   console.log("register endpoint called; request body:");
   console.log(req.body);
-  const {email, password} = req.body;
+  const { fullName, cpf, email, password } = req.body;
 
   if(isAuthenticated({email, password}) === true) {
     const status = 401;
@@ -58,7 +58,13 @@ fs.readFile("./users.json", (err, data) => {
     var last_item_id = data.users[data.users.length-1].id;
 
     //Add new user
-    data.users.push({id: last_item_id + 1, email: email, password: password}); //add some data
+    data.users.push({
+      id: last_item_id + 1,
+      fullName: fullName,
+      cpf: cpf,
+      email: email,
+      password: password,
+    }); //add some data
     var writeData = fs.writeFile("./users.json", JSON.stringify(data), (err, result) => {  // WRITE
         if (err) {
           const status = 401
@@ -86,7 +92,14 @@ server.post('/auth/login', (req, res) => {
     res.status(status).json({status, message})
     return
   }
-  const access_token = createToken({email, password})
+  const userData = userdb.users[userdb.users.findIndex(
+    (user) => user.email === email
+  )];
+  const access_token = createToken({
+    cpf: userData.cpf,
+    email: userData.email,
+    fullName: userData.fullName
+  });
   console.log("Access Token:" + access_token);
   res.status(200).json({access_token})
 })
@@ -100,7 +113,7 @@ server.use(/^(?!\/auth).*$/,  (req, res, next) => {
   }
   try {
     let verifyTokenResult;
-     verifyTokenResult = verifyToken(req.headers.authorization.split(' ')[1]);
+    verifyTokenResult = verifyToken(req.headers.authorization.split(' ')[1]);
 
      if (verifyTokenResult instanceof Error) {
        const status = 401
